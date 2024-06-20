@@ -7,10 +7,10 @@
 
 ### Core Features
 
-Can track every bus for a single line aswell as timings such as arrival date and start date
-Can track its actual location in the world (Latitude and Longtitude)
-Can calculate the distances between every bus stop in a custom range (Default: 300m) from the bus in a route and find the closest one / current one or the next one.
-Can figure out whether the route the bus you've been tracking has ended (the bus has arrived to its destination)
+- Can track every bus for a single line aswell as timings such as arrival date and start date
+- Can track its actual location in the world (Latitude and Longtitude)
+- Can calculate the distances between every bus stop in a custom range (Default: 300m) from the bus in a route and find the closest one / current one or the next one.
+- Can figure out whether the route the bus you've been tracking has ended (the bus has arrived to its destination)
 
 ## General Features
 
