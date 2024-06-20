@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport"
+		content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>Document</title>
+	<style>
+		.canvas {
+			margin: 10% auto 0;
+			height: 100vh;
+			width: 50vw;
+		}
+	</style>
+<body>
+<div>
+	<canvas id="chart" class="canvas"></canvas>
+</div>
+</body>
+</html>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src=" https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js "></script>
+<script type="module">
+	
+	function randomColor() {
+		const r = Math.floor(Math.random() * 255);
+		const g = Math.floor(Math.random() * 255);
+		const b = Math.floor(Math.random() * 255);
+		return "rgb(" + r + "," + g + "," + b + ")";
+	}
+	
+	let colors = []
+	
+	class WebsocketClient extends EventTarget {
+		ws;
+		
+		sendPing() {
+			if (this.ws.OPEN) {
+				this.ws.send(JSON.stringify({
+					type: "ping"
+				}))
+			}
+		}
+		
+		requestData() {
+			if (this.ws.OPEN) {
+				this.ws.send(JSON.stringify({
+					type: "get_data"
+				}))
+			}
+		}
+		
+		onMessage() {
+			this.ws.onmessage = (msg) => {
+				const message = JSON.parse(msg.data)
+				
+				switch (message.type) {
+					case "get_data": {
+						const data = message["data"]
+						const busLines = []
+						const times = [] /* Parallel lists?! */
+						const timestamps = []
+						colors = []
+						for (let i = 0; i < data.length; i++) {
+							busLines.push(data[i]["bus_line"])
+							times.push(data[i]["times"])
+							colors.push(randomColor())
+						}
+						
+						// 	// timestamps.push(DateTime.fromMillis(FinishedBusRoute["arrivalTimes"]))
+						// }
+						this.dispatchEvent(new CustomEvent("Data", {
+							detail: {
+								times: times,
+								lines: busLines,
+								timestamps: timestamps
+							}
+						}))
+						break
+					}
+				}
+			}
+		}
+		
+		connect() {
+			this.ws = new WebSocket("ws://127.0.0.1:4040/ws")
+			this.ws.onopen = () => {
+				this.dispatchEvent(new CustomEvent("Open", {}))
+				setInterval(() => this.sendPing(), 5000)
+				setInterval(() => this.requestData(), 6000)
+				this.onMessage()
+			}
+		}
+	}
+	
+	class Visualizer {
+		busLine = [];
+		routeCount = []
+		timestamps = []
+		chart;
+		
+		drawChart() {
+			const ctx = document.getElementById('chart');
+			console.log(this.busLine, this.routeCount)
+			if (this.chart) {
+				this.chart.destroy()
+			}
+			this.chart = new Chart(ctx, {
+				type: 'bar',
+				data: {
+					labels: this.busLine,
+					datasets: [{
+						label: 'Routes Completed Since Run',
+						data: [45, 1, 6, 4],
+						borderWidth: 1,
+						backgroundColor: colors,
+						
+					}]
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: true,
+					scales: {
+						y: {
+							beginAtZero: true,
+							ticks: {
+								callback: value => `${value} (ΦΟΡΑ)`,
+								precision: 0,
+							}
+						}
+					}
+				}
+			});
+			console.log("Drew chart")
+		}
+	}
+	
+	document.addEventListener("DOMContentLoaded", () => {
+		 const Client = new WebsocketClient()
+		const Visualiser = new Visualizer()
+		
+		Client.addEventListener("Open", () => {
+			console.log(`[DEBUG]: Connected to Websocket`)
+			Client.requestData();
+		})
+
+		Client.addEventListener("Data", (data) => {
+			Visualiser.busLine = data["detail"]["lines"]
+			Visualiser.routeCount = data["detail"]["times"]
+			// Visualiser.timestamps = data["detail"]["timestamps"]
+			console.log("Drawing chart")
+			Visualiser.drawChart()
+
+		})
+		Client.connect()
+		console.log("Drawing chart")
+		Visualiser.drawChart()
+	})
+</script>
